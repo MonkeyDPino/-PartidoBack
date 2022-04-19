@@ -60,7 +60,6 @@ router.post("/login",async (req, response) => {
           error: "El Usuario no existe",
         });
         
-        console.log(user)
 
       const Pass = Cryptojs.AES.decrypt(
         user.contrasena,
