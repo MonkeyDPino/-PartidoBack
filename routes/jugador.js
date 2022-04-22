@@ -61,16 +61,32 @@ router.patch("/rol", verifyTokenAndAdmin, async function (req, res) {
   }
 });
 
-// router.delete("/",verifyTokenAndAdmin,async function(req, res){
-//     if(!req.query.id){
-//         return res.status(500).json("No hay ID de usuario");
-//     }
-//     try{
-//         await Jugador.findByIdAndDelete(req.query.id)
-//         res.status(200).json("Usuario eliminado")
-//     }catch (err) {
-//         return res.status(500).json(err)
-//     }
-// })
+//Los Jugadores
+
+router.get("/", verifyTokenAndAuth, async function (req, res) {
+  try {
+    let users = await Jugador.find();
+    users = users.map((user) => {
+      user.contrasena = "";
+      return user;
+    });
+    return res.status(200).json(users);
+  } catch (err) {
+    return res.status(500).json(err);
+  }
+});
+
+//Eliminar Jugador
+router.delete("/", verifyTokenAndAdmin, async function (req, res) {
+  if (!req.query.id) {
+    return res.status(500).json("No hay ID de usuario");
+  }
+  try {
+    await Jugador.findByIdAndDelete(req.query.id);
+    res.status(200).json("Usuario eliminado");
+  } catch (err) {
+    return res.status(500).json(err);
+  }
+});
 
 module.exports = router;
