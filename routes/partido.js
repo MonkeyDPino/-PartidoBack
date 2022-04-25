@@ -4,6 +4,7 @@ const Partido = require("../models/partido-model");
 const {
   verifyTokenAndAuth,
   verifyTokenAndAdmin,
+  verifyToken,
 } = require("../middlewares/verifyToken");
 
 //Crear partido
@@ -87,6 +88,26 @@ router.patch("/", verifyTokenAndAdmin, async function (req, response) {
     return response.status(200).json(partidoActualizado);
   } catch (err) {
     return response.status(500).json(err);
+  }
+});
+
+//partidos
+router.get("/", verifyToken, async (req, res) => {
+  try {
+    const partidos = await Partido.find();
+    return res.status(200).json(partidos);
+  } catch (err) {
+    return res.status(500).json(err);
+  }
+});
+
+//partido
+router.get("/:id", verifyToken, async (req, res) => {
+  try {
+    const partido = await Partido.findOne({_id:req.params.id});
+    return res.status(200).json(partido);
+  } catch (err) {
+    return res.status(500).json(err);
   }
 });
 
