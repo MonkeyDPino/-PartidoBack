@@ -173,6 +173,31 @@ router.patch("/dato", verifyTokenAndAdmin, async function (req, response) {
   }
 });
 
+//confirmar partido
+router.patch("/confirmar", verifyTokenAndAdmin, async function (req, response) {
+  const partido = req.body;
+  if (!partido.id) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta id del partido",
+    });
+  }
+  try {
+    const partidoActualizado = await Partido.findByIdAndUpdate(
+      partido.id,
+      {
+        $set: {
+          estado: "Confirmado",
+        },
+      },
+      { new: true }
+    );
+    return response.status(200).json(partidoActualizado);
+  } catch (err) {
+    return response.status(500).json(err);
+  }
+});
+
 //partidos
 router.get("/", verifyToken, async (req, res) => {
   try {
