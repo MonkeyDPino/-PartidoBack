@@ -91,10 +91,48 @@ router.patch("/", verifyTokenAndAdmin, async function (req, response) {
   }
 });
 
+//Agregar dato a partido
+router.post("/dato", verifyTokenAndAdmin, async function (req, response) {
+  const partido = req.body;
+  if (!partido.id) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta id del partido",
+    });
+  }
+  if (!partido.llave) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta llave de dato",
+    });
+  }
+  if (!partido.valor) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta valor de dato",
+    });
+  }
+  try {
+    const partidoActualizado = await Partido.updateOne(
+      { _id: partido.id },
+      {
+        $addToSet: {
+          datos: { llave: partido.llave, valor: partido.valor },
+        },
+      },
+      { new: true }
+    );
+    return response.status(200).json(partidoActualizado);
+  } catch (err) {
+    return response.status(500).json(err);
+  }
+});
+
 //partidos
 router.get("/", verifyToken, async (req, res) => {
   try {
     const partidos = await Partido.find();
+
     return res.status(200).json(partidos);
   } catch (err) {
     return res.status(500).json(err);
@@ -104,7 +142,7 @@ router.get("/", verifyToken, async (req, res) => {
 //partido
 router.get("/:id", verifyToken, async (req, res) => {
   try {
-    const partido = await Partido.findOne({_id:req.params.id});
+    const partido = await Partido.findOne({ _id: req.params.id });
     return res.status(200).json(partido);
   } catch (err) {
     return res.status(500).json(err);
