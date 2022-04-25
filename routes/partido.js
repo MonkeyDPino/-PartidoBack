@@ -130,8 +130,8 @@ router.post("/dato", verifyTokenAndAdmin, async function (req, response) {
 
 //modificar dato de partido
 
-router.patch("/dato",verifyTokenAndAdmin,async function (req, response){
-  const cuerpo = req.body
+router.patch("/dato", verifyTokenAndAdmin, async function (req, response) {
+  const cuerpo = req.body;
   if (!cuerpo.id) {
     return response.status(400).send({
       ok: false,
@@ -158,11 +158,11 @@ router.patch("/dato",verifyTokenAndAdmin,async function (req, response){
   }
   try {
     const partidoActualizado = await Partido.updateOne(
-      { _id: cuerpo.id, "datos._id": cuerpo.idDato},
+      { _id: cuerpo.id, "datos._id": cuerpo.idDato },
       {
         $set: {
           "datos.$.llave": cuerpo.llave,
-          "datos.$.valor": cuerpo.valor
+          "datos.$.valor": cuerpo.valor,
         },
       },
       { new: true }
@@ -171,8 +171,7 @@ router.patch("/dato",verifyTokenAndAdmin,async function (req, response){
   } catch (err) {
     return response.status(500).json(err);
   }
-
-})
+});
 
 //partidos
 router.get("/", verifyToken, async (req, res) => {
@@ -192,6 +191,31 @@ router.get("/:id", verifyToken, async (req, res) => {
     return res.status(200).json(partido);
   } catch (err) {
     return res.status(500).json(err);
+  }
+});
+
+//Cancelar partido
+router.delete("/", verifyTokenAndAdmin, async function (req, response) {
+  const partido = req.body;
+  if (!partido.id) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta id del partido",
+    });
+  }
+  try {
+    const partidoActualizado = await Partido.findByIdAndUpdate(
+      partido.id,
+      {
+        $set: {
+          estado: "Cancelado",
+        },
+      },
+      { new: true }
+    );
+    return response.status(200).json(partidoActualizado);
+  } catch (err) {
+    return response.status(500).json(err);
   }
 });
 
