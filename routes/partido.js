@@ -128,6 +128,52 @@ router.post("/dato", verifyTokenAndAdmin, async function (req, response) {
   }
 });
 
+//modificar dato de partido
+
+router.patch("/dato",verifyTokenAndAdmin,async function (req, response){
+  const cuerpo = req.body
+  if (!cuerpo.id) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta id del partido",
+    });
+  }
+  if (!cuerpo.idDato) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta id de dato",
+    });
+  }
+  if (!cuerpo.llave) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta llave de dato",
+    });
+  }
+  if (!cuerpo.valor) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta valor de dato",
+    });
+  }
+  try {
+    const partidoActualizado = await Partido.updateOne(
+      { _id: cuerpo.id, "datos._id": cuerpo.idDato},
+      {
+        $set: {
+          "datos.$.llave": cuerpo.llave,
+          "datos.$.valor": cuerpo.valor
+        },
+      },
+      { new: true }
+    );
+    return response.status(200).json(partidoActualizado);
+  } catch (err) {
+    return response.status(500).json(err);
+  }
+
+})
+
 //partidos
 router.get("/", verifyToken, async (req, res) => {
   try {
