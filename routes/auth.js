@@ -26,12 +26,6 @@ router.post("/register", async function (req, response) {
       error: "Falta contrasena",
     });
   }
-  if (!user.promedioGlobal) {
-    return response.status(400).send({
-      ok: false,
-      error: "Falta promedio global",
-    });
-  }
 
   const { contrasena, ...others } = user;
 

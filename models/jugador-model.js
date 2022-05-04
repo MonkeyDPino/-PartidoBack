@@ -17,7 +17,8 @@ const jugadorSchema = new Schema({
     },
     promedioGlobal: {
         type: Number,
-        required: true
+        required: true,
+        default: 5
     },
     promedioLastMatch:{
         type: Number
