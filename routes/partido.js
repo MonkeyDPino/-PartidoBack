@@ -298,12 +298,17 @@ router.delete("/lista/:id",verifyTokenAndAdmin,async function (req, response) {
       });
     }
     try {
+      const partidoBuscado = await Partido.findById(partido.id);
+
+      const listaNueva = partidoBuscado.lista.filter(jugador =>{
+        jugador.id != jugadorId
+      })
+
       const partidoActualizado = await Partido.findByIdAndUpdate(partido.id, {
-        $pull: {
-          lista: { id: jugadorId },
+        $set: {
+          lista: listaNueva,
         },
       });
-      console.log(partidoActualizado);
       return response.status(200).json(partidoActualizado);
     } catch (err) {
       return response.status(500).send({
@@ -314,4 +319,48 @@ router.delete("/lista/:id",verifyTokenAndAdmin,async function (req, response) {
   }
 );
 
+//agregar jugador a lista
+router.patch("/lista/:id", verifyTokenAndAdmin, async function (req, response) {
+  const partido = req.body;
+  const jugadorId = req.params.id;
+
+  if (!partido.id) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta id del partido",
+    });
+  }
+  if (!jugadorId) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta id del jugador",
+    });
+  }
+  try {
+    const partidoBuscado = await Partido.findById(partido.id);
+    let continuar = true
+    partidoBuscado.lista.map((jugador) => {
+      if(jugador.id === jugadorId)continuar = false;
+    });
+
+    if (!continuar) {
+      return response.status(400).json({
+        ok: false,
+        error: "Ya esta el jugador en la lista",
+      });
+    }
+
+    const partidoActualizado = await Partido.findByIdAndUpdate(partido.id, {
+      $addToSet: {
+        lista: { id: jugadorId },
+      },
+    });
+    return response.status(200).json(partidoActualizado);
+  } catch (err) {
+    return response.status(500).send({
+      ok: false,
+      error: err,
+    });
+  }
+});
 module.exports = router;
