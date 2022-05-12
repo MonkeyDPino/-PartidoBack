@@ -425,4 +425,97 @@ router.post("/equipos", verifyTokenAndAdmin, async function (req, response) {
   }
 });
 
+//Cambiar jugadores de equipo
+router.patch("/equipos",verifyTokenAndAdmin, async function (req, response){
+  const partido = req.body;
+  if (!partido.id) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta id del partido",
+    });
+  }
+  if (!partido.idJugador1) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta id del jugador",
+    });
+  }
+  if (!partido.idJugador2) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta id del jugador",
+    });
+  }
+
+  try {
+    const partidoBuscado = await Partido.findById(partido.id);
+
+    if (partidoBuscado.lista.length != 10) {
+      return response.status(400).send({
+        ok: false,
+        error: "La lista está incompleta",
+      });
+    }
+    if (partidoBuscado.equipoA.length != 5 || partidoBuscado.equipoB.length != 5) {
+      return response.status(400).send({
+        ok: false,
+        error: "Equipos Incompletos",
+      });
+    }
+
+    let equipoA = [],
+      equipoB = [];
+    for (let i = 0; i <= 4; i++) {
+      equipoA.push(partidoBuscado.equipoA[i].id);
+      equipoB.push(partidoBuscado.equipoB[i].id);
+    }
+
+    if (equipoB.includes(partido.idJugador1) ||equipoA.includes(partido.idJugador2)) {
+      return response.status(400).send({
+        ok: false,
+        error: "El jugador ya esta en ese equipo",
+      });
+    }
+    if (!equipoB.includes(partido.idJugador2) || !equipoA.includes(partido.idJugador1)) {
+      return response.status(400).send({
+        ok: false,
+        error: "El jugador no esta en ese equipo",
+      });
+    }
+
+    equipoA = partidoBuscado.equipoA.filter(
+      (jugador) => jugador.id != partido.idJugador1
+    );
+    equipoB = partidoBuscado.equipoB.filter(
+      (jugador) => jugador.id != partido.idJugador2
+    );
+    equipoA.push({
+      id: partido.idJugador2,
+    });
+    equipoB.push({
+      id: partido.idJugador1,
+    });
+
+    const partidoActualizado = await Partido.findByIdAndUpdate(
+      partido.id,
+      {
+        $set: {
+          equipoA,
+          equipoB
+        },
+      },
+      { new: true }
+    );
+    return response.status(200).json(partidoActualizado);
+  } catch (err) {
+    return response.status(500).send({
+      ok: false,
+      error: err,
+    });
+  }
+
+  
+})
+
+
 module.exports = router;
