@@ -7,6 +7,7 @@ const {
   verifyTokenAndAdmin,
   verifyToken,
 } = require("../middlewares/verifyToken");
+const { ParesImpares,SegundaOpcion } = require("../algoritmos");
 
 //Crear partido
 router.post("/", verifyTokenAndAdmin, async function (req, response) {
@@ -246,7 +247,7 @@ router.delete("/", verifyTokenAndAdmin, async function (req, response) {
 });
 
 //Crear lista de participantes
-router.post("/lista/crear",verifyTokenAndAdmin,async function (req, response) {
+router.post("/lista",verifyTokenAndAdmin,async function (req, response) {
     const partido = req.body;
     if (!partido.id) {
       return response.status(400).send({
@@ -300,9 +301,9 @@ router.delete("/lista/:id",verifyTokenAndAdmin,async function (req, response) {
     try {
       const partidoBuscado = await Partido.findById(partido.id);
 
-      const listaNueva = partidoBuscado.lista.filter(jugador =>{
-        jugador.id != jugadorId
-      })
+      const listaNueva = partidoBuscado.lista.filter((jugador) => {
+        jugador.id != jugadorId;
+      });
 
       const partidoActualizado = await Partido.findByIdAndUpdate(partido.id, {
         $set: {
@@ -338,9 +339,9 @@ router.patch("/lista/:id", verifyTokenAndAdmin, async function (req, response) {
   }
   try {
     const partidoBuscado = await Partido.findById(partido.id);
-    let continuar = true
+    let continuar = true;
     partidoBuscado.lista.map((jugador) => {
-      if(jugador.id === jugadorId)continuar = false;
+      if (jugador.id === jugadorId) continuar = false;
     });
 
     if (!continuar) {
@@ -363,4 +364,65 @@ router.patch("/lista/:id", verifyTokenAndAdmin, async function (req, response) {
     });
   }
 });
+
+router.post("/equipos", verifyTokenAndAdmin, async function (req, response) {
+  const partido = req.body;
+  if (!partido.id) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta id del partido",
+    });
+  }
+
+  if (!partido.criterio || !["promedioGlobal", "promedioLastMatch"].includes(partido.criterio) ) {
+    return response.status(400).send({
+      ok: false,
+      error: "criterio no válido",
+    });
+  }
+
+  if ( !partido.algoritmo || !["ParesImpares", "SegundaOpcion"].includes(partido.algoritmo)) {
+    return response.status(400).send({
+      ok: false,
+      error: "algoritmo no válido",
+    });
+  }
+
+  try {
+    const partidoBuscado = await Partido.findById(partido.id);
+    if (partidoBuscado.lista.length != 10) {
+      return response.status(400).send({
+        ok: false,
+        error: "lista incompleta",
+      });
+    }
+    const lista = partidoBuscado.lista.map((doc) => {
+      return doc.id;
+    });
+
+    const jugadores = await Jugador.find({ _id: { $in: lista } });
+
+    const equipos =
+      partido.algoritmo == "ParesImpares"
+        ? ParesImpares(partido.criterio, jugadores)
+        : SegundaOpcion(partido.criterio, jugadores);
+
+    equipos.estado = "EquiposGenerados";
+
+    const partidoActualizado = await Partido.findByIdAndUpdate(
+      partido.id,
+      {
+        $set: equipos,
+      },
+      { new: true }
+    );
+    return response.status(200).json(partidoActualizado);
+  } catch (err) {
+    return response.status(500).send({
+      ok: false,
+      error: err,
+    });
+  }
+});
+
 module.exports = router;

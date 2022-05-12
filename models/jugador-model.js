@@ -21,7 +21,9 @@ const jugadorSchema = new Schema({
         default: 5
     },
     promedioLastMatch:{
-        type: Number
+        type: Number,
+        required: true,
+        default: 5
     },
     rol:{
         type: String,
