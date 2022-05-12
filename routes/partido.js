@@ -456,13 +456,6 @@ router.patch("/equipos",verifyTokenAndAdmin, async function (req, response){
         error: "La lista está incompleta",
       });
     }
-    if (partidoBuscado.equipoA.length != 5 || partidoBuscado.equipoB.length != 5) {
-      return response.status(400).send({
-        ok: false,
-        error: "Equipos Incompletos",
-      });
-    }
-
     let equipoA = [],
       equipoB = [];
     for (let i = 0; i <= 4; i++) {
@@ -512,9 +505,7 @@ router.patch("/equipos",verifyTokenAndAdmin, async function (req, response){
       ok: false,
       error: err,
     });
-  }
-
-  
+  } 
 })
 
 
