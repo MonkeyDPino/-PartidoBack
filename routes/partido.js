@@ -508,5 +508,58 @@ router.patch("/equipos",verifyTokenAndAdmin, async function (req, response){
   } 
 })
 
+//calificar jugadores
+router.post("/calificaciones",verifyToken, async function (req, response){
+  const partido = req.body
+  if (!partido.id) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta id del partido",
+    });
+  }
+  if (!partido.calificaciones) {
+    return response.status(400).send({
+      ok: false,
+      error: "Faltan las calificaciones del partido",
+    });
+  }
+  try {
+    let arrayJugadoresCalificados = [];
+    let arraypromesas = [];
+    partido.calificaciones.map(async (cal) => {
+      const promesa = Jugador.findByIdAndUpdate(
+        cal.idJugador,
+        {
+          $addToSet: {
+            calificaciones: {
+              num: cal.num,
+              comentario: cal.comentario,
+              fecha: new Date,
+            },
+          },
+        },
+        { new: true }
+      ).then((jugador) => arrayJugadoresCalificados.push(jugador));
+      arraypromesas.push(promesa);
+    });
+    Promise.all(arraypromesas)
+      .then(function (results) {
+        return response.status(200).json(arrayJugadoresCalificados);
+      })
+      .catch((err) => {
+        return response.status(500).send({
+          ok: false,
+          error: err,
+        });
+      });
+  } catch (err) {
+    return response.status(500).send({
+      ok: false,
+      error: err,
+    });
+  }
+
+})
+
 
 module.exports = router;

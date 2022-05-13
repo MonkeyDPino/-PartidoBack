@@ -107,7 +107,7 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
     });
   }
   
-  // try {
+  try {
     const partidoBuscado = await Partido.findById(partido.id);
     let partidoPerteneciente = "",
       equipoA,
@@ -151,9 +151,9 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
       { new: true }
     );
     return response.status(200).json(partidoActualizado);
-  // } catch (err) {
-  //   return res.status(500).json(err);
-  // }
+  } catch (err) {
+    return res.status(500).json(err);
+  }
 });
 
 module.exports = router;
