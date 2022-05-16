@@ -181,4 +181,43 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
   }
 });
 
+//sancionar jugador
+router.post("/infraccion",verifyTokenAndAuth,async function (req, response){
+  const body = req.body;
+  const idJugador = req.query.id;
+  if (!body.motivo) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta motivo de la infracción",
+    });
+  }
+  if (!idJugador) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta id del jugador",
+    });
+  }
+  try {
+    let retorno = {}
+    crearInfraccion(body.motivo)
+      .then((result) => {
+        retorno.infraccion = result;
+        return anadirInfraccion(idJugador, result._id);
+      })
+      .then((result) => {
+        retorno.jugadorPenalizado = result;
+        return response.status(200).json(retorno);
+      })
+      .catch((error) => {
+        return response.status(400).send({
+          ok: false,
+          error: error,
+        });
+      });      
+  } catch (err) {
+    return response.status(500).json(err);
+  }
+
+})
+
 module.exports = router;
