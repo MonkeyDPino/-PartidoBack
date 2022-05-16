@@ -365,6 +365,7 @@ router.patch("/lista/:id", verifyTokenAndAdmin, async function (req, response) {
   }
 });
 
+//crear equipos
 router.post("/equipos", verifyTokenAndAdmin, async function (req, response) {
   const partido = req.body;
   if (!partido.id) {

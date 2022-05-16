@@ -6,6 +6,7 @@ const {
   verifyTokenAndAuth,
   verifyTokenAndAdmin,
 } = require("../middlewares/verifyToken");
+const { crearInfraccion,anadirInfraccion } = require("../algoritmos");
 
 //Actualizar Jugador
 router.patch("/", verifyTokenAndAuth, async function (req, res) {
@@ -112,7 +113,8 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
     let partidoPerteneciente = "",
       equipoA,
       equipoB,
-      filter = {};
+      filter = {},
+      retorno = {};
 
     equipoA = partidoBuscado.equipoA.filter((jugador) => {
       if (jugador.id == idJugador) {
@@ -140,6 +142,28 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
     if (partido.suplenteId) {
       partidoPerteneciente == "A" && equipoA.push({ id: partido.suplenteId });
       partidoPerteneciente == "B" && equipoB.push({ id: partido.suplenteId });
+    }else{
+      //Crear infraccion por falta de suplente
+
+      let retornarError = false;
+      let Error;
+      crearInfraccion("Darse de baja sin asignar un reemplazo")
+      .then((result) => {
+        retorno.infraccion = result
+        return anadirInfraccion(idJugador,result._id)
+      })
+      .then((result) => {
+        retorno.jugadorPenalizado = result
+      })
+      .catch((error) => {
+        Error = error
+        retornarError = true
+      })
+      if(retornarError)return response.status(400).send({
+        ok: false,
+        error: Error,
+      });
+
     }
     partidoPerteneciente == "A" && (filter.equipoA = equipoA);
     partidoPerteneciente == "B" && (filter.equipoB = equipoB);
@@ -150,9 +174,10 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
       },
       { new: true }
     );
-    return response.status(200).json(partidoActualizado);
+    retorno.partidoActualizado = partidoActualizado
+    return response.status(200).json(retorno);
   } catch (err) {
-    return res.status(500).json(err);
+    return response.status(500).json(err);
   }
 });
 

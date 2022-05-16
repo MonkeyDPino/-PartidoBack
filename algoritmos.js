@@ -1,3 +1,6 @@
+const Infraccion = require("./models/infraccion-model");
+const Jugador = require("./models/jugador-model");
+
 const ParesImpares = (criterio, jugadores) => {
   criterio == "promedioGlobal"
     ? jugadores.sort(compareGlobal)
@@ -59,7 +62,30 @@ function compareGlobal(a, b) {
   return 0;
 }
 
+function crearInfraccion(Motivo) {
+  const infraccion = new Infraccion({
+    fecha: new Date(),
+    motivo: Motivo,
+  });
+
+  return infraccion.save();
+}
+
+function anadirInfraccion(idJugador,idinfraccion){
+  return Jugador.findByIdAndUpdate(
+    idJugador,
+    {
+      $addToSet: {
+        infracciones: { id:idinfraccion },
+      },
+    },
+    { new: true }
+  );
+}
+
 module.exports = {
   ParesImpares,
-  SegundaOpcion
+  SegundaOpcion,
+  crearInfraccion,
+  anadirInfraccion
 };
