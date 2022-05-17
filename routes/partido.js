@@ -7,10 +7,10 @@ const {
   verifyTokenAndAdmin,
   verifyToken,
 } = require("../middlewares/verifyToken");
-const { ParesImpares,SegundaOpcion } = require("../algoritmos");
+const { ParesImpares,SegundaOpcion,sendEmail,sendEmailToAllPlayers } = require("../algoritmos");
 
 //Crear partido
-router.post("/", verifyTokenAndAdmin, async function (req, response) {
+router.post("/", verifyTokenAndAdmin, async function (req, response) { 
   let continuar = true;
   const partidos = await Partido.find();
 
@@ -49,10 +49,14 @@ router.post("/", verifyTokenAndAdmin, async function (req, response) {
   }
 
   const newPartido = new Partido(partido);
-
-  await newPartido.save((err, result) => {
+  let retorno = {}
+  await newPartido.save(async (err, result) => {
     if (err) return response.status(500).send({ err });
-    return response.status(200).send({ result });
+
+    retorno.partido = result
+    const notificaciones = await sendEmailToAllPlayers("Creación de partido","El administrador ha creado un nuevo partido ¡Atento pues!")
+    retorno.notificaciones = notificaciones
+    return response.status(500).send(retorno)
   });
 });
 

@@ -1,5 +1,6 @@
 const Infraccion = require("./models/infraccion-model");
 const Jugador = require("./models/jugador-model");
+var nodemailer = require('nodemailer');
 
 const ParesImpares = (criterio, jugadores) => {
   criterio == "promedioGlobal"
@@ -83,9 +84,38 @@ function anadirInfraccion(idJugador,idinfraccion){
   );
 }
 
+function sendEmail(asunto,texto,receptor){
+  var transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.CORREO_APP,
+      pass: process.env.CONTRASENA_APP
+    }
+  });
+
+  var mailOptions = {
+    from: process.env.CORREO_APP,
+    to: receptor,
+    subject: asunto,
+    text: texto
+  };
+
+  return transporter.sendMail(mailOptions);
+}
+
+async function sendEmailToAllPlayers(asunto,texto){
+  let users = await Jugador.find();
+  let correos = users.map((user) => {
+      return user.correo;
+    });
+  return sendEmail(asunto,texto,correos);
+}
+
 module.exports = {
   ParesImpares,
   SegundaOpcion,
   crearInfraccion,
-  anadirInfraccion
+  anadirInfraccion,
+  sendEmail,
+  sendEmailToAllPlayers
 };
