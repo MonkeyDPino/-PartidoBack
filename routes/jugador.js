@@ -7,6 +7,7 @@ const {
   verifyTokenAndAdmin,
 } = require("../middlewares/verifyToken");
 const { crearInfraccion,anadirInfraccion } = require("../algoritmos");
+const { ParesImpares,SegundaOpcion,sendEmail,sendEmailToAllPlayers } = require("../algoritmos");
 
 //Actualizar Jugador
 router.patch("/", verifyTokenAndAuth, async function (req, res) {
@@ -110,12 +111,20 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
   
   try {
     const partidoBuscado = await Partido.findById(partido.id);
+    if (partidoBuscado.estado != "EquiposGenerados") {
+      return response.status(400).send({
+        ok: false,
+        error: "El partido no esta en fase de generar equipos",
+      });
+    }
+
     let partidoPerteneciente = "",
       equipoA,
       equipoB,
       filter = {},
       retorno = {};
 
+      // Revisar en que equipo esta el jugador
     equipoA = partidoBuscado.equipoA.filter((jugador) => {
       if (jugador.id == idJugador) {
         partidoPerteneciente = "A";
@@ -126,7 +135,6 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
     if (partidoPerteneciente != "A") {
       equipoB = partidoBuscado.equipoB.filter((jugador) => {
         if (jugador.id == idJugador) {
-          console.log("es B")
           partidoPerteneciente = "B";
           return false;
         }
@@ -139,6 +147,7 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
         error: "Jugador no convocado",
       });
     }
+    //Revisar suplente
     if (partido.suplenteId) {
       partidoPerteneciente == "A" && equipoA.push({ id: partido.suplenteId });
       partidoPerteneciente == "B" && equipoB.push({ id: partido.suplenteId });
@@ -175,6 +184,12 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
       { new: true }
     );
     retorno.partidoActualizado = partidoActualizado
+
+    //Notificar
+    const jugadorAusente = await Jugador.findById(idJugador)
+    const notificaciones = await sendEmailToAllPlayers("Un jugador se ha dado de baja en un partido","El Jugador "+jugadorAusente.nombre+" se ha bajado del partido")
+    retorno.notificaciones = notificaciones
+
     return response.status(200).json(retorno);
   } catch (err) {
     return response.status(500).json(err);

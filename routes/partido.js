@@ -52,7 +52,6 @@ router.post("/", verifyTokenAndAdmin, async function (req, response) {
   let retorno = {}
   await newPartido.save(async (err, result) => {
     if (err) return response.status(500).send({ err });
-
     retorno.partido = result
     const notificaciones = await sendEmailToAllPlayers("Creación de partido","El administrador ha creado un nuevo partido ¡Atento pues!")
     retorno.notificaciones = notificaciones
@@ -189,6 +188,7 @@ router.patch("/confirmar", verifyTokenAndAdmin, async function (req, response) {
     });
   }
   try {
+    let retorno = {}
     const partidoActualizado = await Partido.findByIdAndUpdate(
       partido.id,
       {
@@ -198,7 +198,10 @@ router.patch("/confirmar", verifyTokenAndAdmin, async function (req, response) {
       },
       { new: true }
     );
-    return response.status(200).json(partidoActualizado);
+    retorno.partidoActualizado = partidoActualizado
+    const notificaciones = await sendEmailToAllPlayers("Partido Confirmado","El administrador ha confirmado un partido")
+    retorno.notificaciones = notificaciones
+    return response.status(200).json(retorno);
   } catch (err) {
     return response.status(500).json(err);
   }
