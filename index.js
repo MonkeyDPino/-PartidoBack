@@ -1,5 +1,6 @@
 const express = require('express');
 require('dotenv').config()
+const cors = require('cors')
 const DBConnection =require("./DBConnection.js")
 
 const authRoute = require("./routes/auth")
@@ -9,7 +10,7 @@ const partidoRoute = require("./routes/partido")
 const app = express();
 
 app.use(express.json())
-
+app.use(cors())
 app.use("/api/auth",authRoute)
 app.use("/api/jugador",jugadorRoute)
 app.use("/api/partido",partidoRoute)

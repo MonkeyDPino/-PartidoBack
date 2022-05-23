@@ -106,7 +106,10 @@ router.post("/login",async (req, response) => {
 
       response.status(200).json({ ...others, accessToken });
     }catch(err){
-      return response.status(500).send({ err });
+      return response.status(500).send({
+        ok: false,
+        error: err,
+      });
     }
       
     
