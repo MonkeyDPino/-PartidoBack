@@ -56,7 +56,10 @@ router.post("/register", async function (req, response) {
       //crear jugador
       await newJugador.save((error, result) => {
         if (error) {
-          return response.status(500).send({ error });
+          return response.status(500).send({
+            ok: false,
+            error: error,
+          });
         }
         return response.send(result);
       });
