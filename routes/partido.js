@@ -214,7 +214,10 @@ router.get("/", verifyToken, async (req, res) => {
 
     return res.status(200).json(partidos);
   } catch (err) {
-    return res.status(500).json(err);
+    return res.status(500).json({
+      ok: false,
+      error: err,
+    });
   }
 });
 
