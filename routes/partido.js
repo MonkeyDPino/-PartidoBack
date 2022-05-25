@@ -129,7 +129,10 @@ router.post("/dato", verifyTokenAndAdmin, async function (req, response) {
     );
     return response.status(200).json(partidoActualizado);
   } catch (err) {
-    return response.status(500).json(err);
+    return response.status(500).json({
+      ok: false,
+      error: err,
+    });
   }
 });
 
