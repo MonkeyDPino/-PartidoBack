@@ -140,7 +140,6 @@ router.post("/dato", verifyTokenAndAdmin, async function (req, response) {
 
 router.delete("/dato", verifyTokenAndAdmin, async function (req, response) {
   const cuerpo = req.body;
-  console.log(cuerpo);
   if (!cuerpo.id) {
     return response.status(400).send({
       ok: false,
