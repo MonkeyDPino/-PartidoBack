@@ -6,8 +6,13 @@ const {
   verifyTokenAndAuth,
   verifyTokenAndAdmin,
 } = require("../middlewares/verifyToken");
-const { crearInfraccion,anadirInfraccion } = require("../algoritmos");
-const { ParesImpares,SegundaOpcion,sendEmail,sendEmailToAllPlayers } = require("../algoritmos");
+const { crearInfraccion, anadirInfraccion } = require("../algoritmos");
+const {
+  ParesImpares,
+  SegundaOpcion,
+  sendEmail,
+  sendEmailToAllPlayers,
+} = require("../algoritmos");
 
 //Actualizar Jugador
 router.patch("/", verifyTokenAndAuth, async function (req, res) {
@@ -67,40 +72,64 @@ router.patch("/rol", verifyTokenAndAdmin, async function (req, res) {
 //Los Jugadores con filtro in
 
 router.patch("/jugadores", verifyTokenAndAuth, async function (req, res) {
-  let filter = {}
-  if(req.body.ids){
-    filter.ids = req.body.ids
-  }
-  try {
-    let users = await Jugador.find({
-      _id:{
-        $in:filter.ids
-      }
-    });
-    users = users.map((user) => {
-      user.contrasena = "";
-      return user;
-    });
-    return res.status(200).json(users);
-  } catch (err) {
-    return res.status(500).json({
-      ok: false,
-      error: err,
-    });
+  if (req.body.equipoA && req.body.equipoB) {
+    try {
+      let equipoA = await Jugador.find({
+        _id: {
+          $in: req.body.equipoA,
+        },
+      });
+      let equipoB = await Jugador.find({
+        _id: {
+          $in: req.body.equipoB,
+        },
+      });
+      return res.status(200).json({
+        equipoB: equipoB,
+        equipoA: equipoA
+      });
+    } catch (err) {
+      return res.status(500).json({
+        ok: false,
+        error: err,
+      });
+    }
+  } else {
+    let filter = {};
+    if (req.body.ids) {
+      filter.ids = req.body.ids;
+    }
+    try {
+      let users = await Jugador.find({
+        _id: {
+          $in: filter.ids,
+        },
+      });
+      users = users.map((user) => {
+        user.contrasena = "";
+        return user;
+      });
+      return res.status(200).json(users);
+    } catch (err) {
+      return res.status(500).json({
+        ok: false,
+        error: err,
+      });
+    }
   }
 });
 //Los Jugadores con filtro not in
 
 router.delete("/jugadores", verifyTokenAndAuth, async function (req, res) {
-  let filter = {}
-  if(req.body.ids){
-    filter.ids = req.body.ids
+  let filter = {};
+  if (req.body.ids) {
+    filter.ids = req.body.ids;
   }
   try {
     let users = await Jugador.find({
-      _id:{
-        $nin:filter.ids
-      }
+      _id: {
+        $nin: filter.ids,
+      },
     });
     users = users.map((user) => {
       user.contrasena = "";
@@ -144,7 +173,7 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
       error: "Falta id del jugador",
     });
   }
-  
+
   try {
     const partidoBuscado = await Partido.findById(partido.id);
     if (partidoBuscado.estado != "EquiposGenerados") {
@@ -160,7 +189,7 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
       filter = {},
       retorno = {};
 
-      // Revisar en que equipo esta el jugador
+    // Revisar en que equipo esta el jugador
     equipoA = partidoBuscado.equipoA.filter((jugador) => {
       if (jugador.id == idJugador) {
         partidoPerteneciente = "A";
@@ -187,28 +216,28 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
     if (partido.suplenteId) {
       partidoPerteneciente == "A" && equipoA.push({ id: partido.suplenteId });
       partidoPerteneciente == "B" && equipoB.push({ id: partido.suplenteId });
-    }else{
+    } else {
       //Crear infraccion por falta de suplente
 
       let retornarError = false;
       let Error;
       crearInfraccion("Darse de baja sin asignar un reemplazo")
-      .then((result) => {
-        retorno.infraccion = result
-        return anadirInfraccion(idJugador,result._id)
-      })
-      .then((result) => {
-        retorno.jugadorPenalizado = result
-      })
-      .catch((error) => {
-        Error = error
-        retornarError = true
-      })
-      if(retornarError)return response.status(400).send({
-        ok: false,
-        error: Error,
-      });
-
+        .then((result) => {
+          retorno.infraccion = result;
+          return anadirInfraccion(idJugador, result._id);
+        })
+        .then((result) => {
+          retorno.jugadorPenalizado = result;
+        })
+        .catch((error) => {
+          Error = error;
+          retornarError = true;
+        });
+      if (retornarError)
+        return response.status(400).send({
+          ok: false,
+          error: Error,
+        });
     }
     partidoPerteneciente == "A" && (filter.equipoA = equipoA);
     partidoPerteneciente == "B" && (filter.equipoB = equipoB);
@@ -219,12 +248,15 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
       },
       { new: true }
     );
-    retorno.partidoActualizado = partidoActualizado
+    retorno.partidoActualizado = partidoActualizado;
 
     //Notificar
-    const jugadorAusente = await Jugador.findById(idJugador)
-    const notificaciones = await sendEmailToAllPlayers("Un jugador se ha dado de baja en un partido","El Jugador "+jugadorAusente.nombre+" se ha bajado del partido")
-    retorno.notificaciones = notificaciones
+    const jugadorAusente = await Jugador.findById(idJugador);
+    const notificaciones = await sendEmailToAllPlayers(
+      "Un jugador se ha dado de baja en un partido",
+      "El Jugador " + jugadorAusente.nombre + " se ha bajado del partido"
+    );
+    retorno.notificaciones = notificaciones;
 
     return response.status(200).json(retorno);
   } catch (err) {
@@ -233,7 +265,7 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
 });
 
 //sancionar jugador
-router.post("/infraccion",verifyTokenAndAuth,async function (req, response){
+router.post("/infraccion", verifyTokenAndAuth, async function (req, response) {
   const body = req.body;
   const idJugador = req.query.id;
   if (!body.motivo) {
@@ -249,7 +281,7 @@ router.post("/infraccion",verifyTokenAndAuth,async function (req, response){
     });
   }
   try {
-    let retorno = {}
+    let retorno = {};
     crearInfraccion(body.motivo)
       .then((result) => {
         retorno.infraccion = result;
@@ -264,11 +296,10 @@ router.post("/infraccion",verifyTokenAndAuth,async function (req, response){
           ok: false,
           error: error,
         });
-      });      
+      });
   } catch (err) {
     return response.status(500).json(err);
   }
-
-})
+});
 
 module.exports = router;

@@ -273,6 +273,8 @@ router.post("/lista",verifyTokenAndAdmin,async function (req, response) {
         {
           $set: {
             lista: usersId,
+            equipoA:[],
+            equipoB:[],
           },
         },
         { new: true }
@@ -309,6 +311,8 @@ router.delete("/lista/:id",verifyTokenAndAdmin,async function (req, response) {
       const partidoActualizado = await Partido.findByIdAndUpdate(partido.id, {
         $set: {
           lista: listaNueva,
+          equipoA:[],
+          equipoB:[]
         },
       });
       return response.status(200).json(partidoActualizado);
@@ -363,6 +367,10 @@ router.patch("/lista/:id", verifyTokenAndAdmin, async function (req, response) {
       $addToSet: {
         lista: { id: jugadorId },
       },
+      $set:{ 
+        equipoA:[],
+        equipoB:[]
+      }
     });
     return response.status(200).json(partidoActualizado);
   } catch (err) {
