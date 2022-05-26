@@ -340,6 +340,13 @@ router.patch("/lista/:id", verifyTokenAndAdmin, async function (req, response) {
   }
   try {
     const partidoBuscado = await Partido.findById(partido.id);
+    if(partidoBuscado.lista.length >= 10){
+      return response.status(400).json({
+        ok: false,
+        error: "la lista ya tiene 10 jugadores",
+      });
+    }
+
     let continuar = true;
     partidoBuscado.lista.map((jugador) => {
       if (jugador.id === jugadorId) continuar = false;
