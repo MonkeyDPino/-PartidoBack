@@ -64,18 +64,54 @@ router.patch("/rol", verifyTokenAndAdmin, async function (req, res) {
   }
 });
 
-//Los Jugadores
+//Los Jugadores con filtro in
 
-router.get("/", verifyTokenAndAuth, async function (req, res) {
+router.patch("/jugadores", verifyTokenAndAuth, async function (req, res) {
+  let filter = {}
+  if(req.body.ids){
+    filter.ids = req.body.ids
+  }
   try {
-    let users = await Jugador.find();
+    let users = await Jugador.find({
+      _id:{
+        $in:filter.ids
+      }
+    });
     users = users.map((user) => {
       user.contrasena = "";
       return user;
     });
     return res.status(200).json(users);
   } catch (err) {
-    return res.status(500).json(err);
+    return res.status(500).json({
+      ok: false,
+      error: err,
+    });
+  }
+});
+//Los Jugadores con filtro not in
+
+router.delete("/jugadores", verifyTokenAndAuth, async function (req, res) {
+  let filter = {}
+  if(req.body.ids){
+    filter.ids = req.body.ids
+  }
+  try {
+    let users = await Jugador.find({
+      _id:{
+        $nin:filter.ids
+      }
+    });
+    users = users.map((user) => {
+      user.contrasena = "";
+      return user;
+    });
+    return res.status(200).json(users);
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: err,
+    });
   }
 });
 

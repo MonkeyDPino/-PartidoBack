@@ -277,7 +277,7 @@ router.post("/lista",verifyTokenAndAdmin,async function (req, response) {
         },
         { new: true }
       );
-      return response.status(200).json(partidoActualizado);
+      return response.status(200).json({partidoActualizado:partidoActualizado});
     } catch (e) {
       return response.status(500).json(err);
     }
@@ -304,9 +304,7 @@ router.delete("/lista/:id",verifyTokenAndAdmin,async function (req, response) {
     try {
       const partidoBuscado = await Partido.findById(partido.id);
 
-      const listaNueva = partidoBuscado.lista.filter((jugador) => {
-        jugador.id != jugadorId;
-      });
+      const listaNueva = partidoBuscado.lista.filter((jugador) => jugador.id != jugadorId);
 
       const partidoActualizado = await Partido.findByIdAndUpdate(partido.id, {
         $set: {
