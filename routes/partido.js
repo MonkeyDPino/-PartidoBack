@@ -7,56 +7,75 @@ const {
   verifyTokenAndAdmin,
   verifyToken,
 } = require("../middlewares/verifyToken");
-const { ParesImpares,SegundaOpcion,sendEmail,sendEmailToAllPlayers } = require("../algoritmos");
+const {
+  ParesImpares,
+  SegundaOpcion,
+  sendEmail,
+  sendEmailToAllPlayers,
+} = require("../algoritmos");
 
 //Crear partido
-router.post("/", verifyTokenAndAdmin, async function (req, response) { 
-  let continuar = true;
-  const partidos = await Partido.find();
+router.post("/", verifyTokenAndAdmin, async function (req, response) {
+  try {
+    let continuar = true;
+    const partidos = await Partido.find();
 
-  partidos.map((partido) => {
-    if ((partido.estado == "Creado") | (partido.estado == "EquiposGenerados")) {
-      continuar = false;
+    partidos.map((partido) => {
+      if (partido.estado == "Creado" || partido.estado == "EquiposGenerados") {
+        continuar = false;
+      }
+    });
+
+    if (!continuar) {
+      return response.status(400).json({
+        ok: false,
+        error: "Ya hay un partido en juego",
+      });
     }
-  });
 
-  if (!continuar) {
-    return response.status(400).json({
+    const partido = req.body;
+
+    if (!partido.fecha) {
+      return response.status(400).send({
+        ok: false,
+        error: "Falta fecha",
+      });
+    }
+    if (!partido.lugar) {
+      return response.status(400).send({
+        ok: false,
+        error: "Falta lugar",
+      });
+    }
+    if (partido.lista || partido.equipoA || partido.equipoB) {
+      return response.status(400).send({
+        ok: false,
+        error: "No se pueden agregar listas",
+      });
+    }
+
+    const newPartido = new Partido(partido);
+    let retorno = {};
+    await newPartido.save(async (err, result) => {
+      if (err)
+        return response.status(500).send({
+          ok: false,
+          error: err,
+        });
+      retorno.partido = result;
+      const notificaciones = await sendEmailToAllPlayers(
+        "Creación de partido",
+        "El administrador ha creado un nuevo partido ¡Atento pues!"
+      );
+      retorno.notificaciones = notificaciones;
+      return response.status(200).send(retorno);
+    });
+  } catch (err) {
+    return response.status(500).json({
       ok: false,
-      error: "Ya hay un partido en juego",
+      error: err,
     });
   }
-
-  const partido = req.body;
-
-  if (!partido.fecha) {
-    return response.status(400).send({
-      ok: false,
-      error: "Falta fecha",
-    });
-  }
-  if (!partido.lugar) {
-    return response.status(400).send({
-      ok: false,
-      error: "Falta lugar",
-    });
-  }
-  if (partido.lista || partido.equipoA || partido.equipoB) {
-    return response.status(400).send({
-      ok: false,
-      error: "No se pueden agregar listas",
-    });
-  }
-
-  const newPartido = new Partido(partido);
-  let retorno = {}
-  await newPartido.save(async (err, result) => {
-    if (err) return response.status(500).send({ err });
-    retorno.partido = result
-    const notificaciones = await sendEmailToAllPlayers("Creación de partido","El administrador ha creado un nuevo partido ¡Atento pues!")
-    retorno.notificaciones = notificaciones
-    return response.status(500).send(retorno)
-  });
 });
 
 //Actualizar fecha y/o lugar de partido
@@ -156,9 +175,9 @@ router.delete("/dato", verifyTokenAndAdmin, async function (req, response) {
     const partidoActualizado = await Partido.findByIdAndUpdate(
       cuerpo.id,
       {
-        $pull: { 
-          datos: { _id: cuerpo.idDatos } 
-        }
+        $pull: {
+          datos: { _id: cuerpo.idDatos },
+        },
       },
       { new: true }
     );
@@ -181,7 +200,7 @@ router.patch("/confirmar", verifyTokenAndAdmin, async function (req, response) {
     });
   }
   try {
-    let retorno = {}
+    let retorno = {};
     const partidoActualizado = await Partido.findByIdAndUpdate(
       partido.id,
       {
@@ -191,9 +210,12 @@ router.patch("/confirmar", verifyTokenAndAdmin, async function (req, response) {
       },
       { new: true }
     );
-    retorno.partidoActualizado = partidoActualizado
-    const notificaciones = await sendEmailToAllPlayers("Partido Confirmado","El administrador ha confirmado un partido")
-    retorno.notificaciones = notificaciones
+    retorno.partidoActualizado = partidoActualizado;
+    const notificaciones = await sendEmailToAllPlayers(
+      "Partido Confirmado",
+      "El administrador ha confirmado un partido"
+    );
+    retorno.notificaciones = notificaciones;
     return response.status(200).json(retorno);
   } catch (err) {
     return response.status(500).json({
@@ -256,44 +278,48 @@ router.delete("/", verifyTokenAndAdmin, async function (req, response) {
 });
 
 //Crear lista de participantes
-router.post("/lista",verifyTokenAndAdmin,async function (req, response) {
-    const partido = req.body;
-    if (!partido.id) {
-      return response.status(400).send({
-        ok: false,
-        error: "Falta id del partido",
-      });
-    }
-    try {
-      const users = await Jugador.find();
-      const usersId = [];
-      users.map((user) => {
-        if (user.tipo == "Frecuente") {
-          usersId.push({
-            id: user._id.toString(),
-          });
-        }
-      });
-      const partidoActualizado = await Partido.findByIdAndUpdate(
-        partido.id,
-        {
-          $set: {
-            lista: usersId,
-            equipoA:[],
-            equipoB:[],
-          },
-        },
-        { new: true }
-      );
-      return response.status(200).json({partidoActualizado:partidoActualizado});
-    } catch (e) {
-      return response.status(500).json(err);
-    }
+router.post("/lista", verifyTokenAndAdmin, async function (req, response) {
+  const partido = req.body;
+  if (!partido.id) {
+    return response.status(400).send({
+      ok: false,
+      error: "Falta id del partido",
+    });
   }
-);
+  try {
+    const users = await Jugador.find();
+    const usersId = [];
+    users.map((user) => {
+      if (user.tipo == "Frecuente") {
+        usersId.push({
+          id: user._id.toString(),
+        });
+      }
+    });
+    const partidoActualizado = await Partido.findByIdAndUpdate(
+      partido.id,
+      {
+        $set: {
+          lista: usersId,
+          equipoA: [],
+          equipoB: [],
+        },
+      },
+      { new: true }
+    );
+    return response
+      .status(200)
+      .json({ partidoActualizado: partidoActualizado });
+  } catch (e) {
+    return response.status(500).json(err);
+  }
+});
 
 //Quitar jugador de lista
-router.delete("/lista/:id",verifyTokenAndAdmin,async function (req, response) {
+router.delete(
+  "/lista/:id",
+  verifyTokenAndAdmin,
+  async function (req, response) {
     const partido = req.body;
     const jugadorId = req.params.id;
 
@@ -312,13 +338,15 @@ router.delete("/lista/:id",verifyTokenAndAdmin,async function (req, response) {
     try {
       const partidoBuscado = await Partido.findById(partido.id);
 
-      const listaNueva = partidoBuscado.lista.filter((jugador) => jugador.id != jugadorId);
+      const listaNueva = partidoBuscado.lista.filter(
+        (jugador) => jugador.id != jugadorId
+      );
 
       const partidoActualizado = await Partido.findByIdAndUpdate(partido.id, {
         $set: {
           lista: listaNueva,
-          equipoA:[],
-          equipoB:[]
+          equipoA: [],
+          equipoB: [],
         },
       });
       return response.status(200).json(partidoActualizado);
@@ -350,7 +378,7 @@ router.patch("/lista/:id", verifyTokenAndAdmin, async function (req, response) {
   }
   try {
     const partidoBuscado = await Partido.findById(partido.id);
-    if(partidoBuscado.lista.length >= 10){
+    if (partidoBuscado.lista.length >= 10) {
       return response.status(400).json({
         ok: false,
         error: "la lista ya tiene 10 jugadores",
@@ -373,10 +401,10 @@ router.patch("/lista/:id", verifyTokenAndAdmin, async function (req, response) {
       $addToSet: {
         lista: { id: jugadorId },
       },
-      $set:{ 
-        equipoA:[],
-        equipoB:[]
-      }
+      $set: {
+        equipoA: [],
+        equipoB: [],
+      },
     });
     return response.status(200).json(partidoActualizado);
   } catch (err) {
@@ -397,14 +425,20 @@ router.post("/equipos", verifyTokenAndAdmin, async function (req, response) {
     });
   }
 
-  if (!partido.criterio || !["promedioGlobal", "promedioLastMatch"].includes(partido.criterio) ) {
+  if (
+    !partido.criterio ||
+    !["promedioGlobal", "promedioLastMatch"].includes(partido.criterio)
+  ) {
     return response.status(400).send({
       ok: false,
       error: "criterio no válido",
     });
   }
 
-  if ( !partido.algoritmo || !["ParesImpares", "SegundaOpcion"].includes(partido.algoritmo)) {
+  if (
+    !partido.algoritmo ||
+    !["ParesImpares", "SegundaOpcion"].includes(partido.algoritmo)
+  ) {
     return response.status(400).send({
       ok: false,
       error: "algoritmo no válido",
@@ -440,8 +474,11 @@ router.post("/equipos", verifyTokenAndAdmin, async function (req, response) {
       { new: true }
     );
 
-    await sendEmailToAllPlayers("Equipos generados","El administrador ha generado los equipos ¡Atento pues! puede que estés en algún equipo")
-    
+    await sendEmailToAllPlayers(
+      "Equipos generados",
+      "El administrador ha generado los equipos ¡Atento pues! puede que estés en algún equipo"
+    );
+
     return response.status(200).json(partidoActualizado);
   } catch (err) {
     return response.status(500).send({
@@ -452,7 +489,7 @@ router.post("/equipos", verifyTokenAndAdmin, async function (req, response) {
 });
 
 //Cambiar jugadores de equipo
-router.patch("/equipos",verifyTokenAndAdmin, async function (req, response){
+router.patch("/equipos", verifyTokenAndAdmin, async function (req, response) {
   const partido = req.body;
   if (!partido.id) {
     return response.status(400).send({
@@ -489,13 +526,19 @@ router.patch("/equipos",verifyTokenAndAdmin, async function (req, response){
       equipoB.push(partidoBuscado.equipoB[i].id);
     }
 
-    if (equipoB.includes(partido.idJugador1) ||equipoA.includes(partido.idJugador2)) {
+    if (
+      equipoB.includes(partido.idJugador1) ||
+      equipoA.includes(partido.idJugador2)
+    ) {
       return response.status(400).send({
         ok: false,
         error: "El jugador ya esta en ese equipo",
       });
     }
-    if (!equipoB.includes(partido.idJugador2) || !equipoA.includes(partido.idJugador1)) {
+    if (
+      !equipoB.includes(partido.idJugador2) ||
+      !equipoA.includes(partido.idJugador1)
+    ) {
       return response.status(400).send({
         ok: false,
         error: "El jugador no esta en ese equipo",
@@ -520,7 +563,7 @@ router.patch("/equipos",verifyTokenAndAdmin, async function (req, response){
       {
         $set: {
           equipoA,
-          equipoB
+          equipoB,
         },
       },
       { new: true }
@@ -531,61 +574,148 @@ router.patch("/equipos",verifyTokenAndAdmin, async function (req, response){
       ok: false,
       error: err,
     });
-  } 
-})
+  }
+});
 
-//calificar jugadores
-router.post("/calificaciones",verifyToken, async function (req, response){
-  const partido = req.body
-  if (!partido.id) {
+//calificar jugador
+router.post("/calificaciones", verifyToken, async function (req, response) {
+  const partido = req.body;
+  if (!partido.idPartido) {
     return response.status(400).send({
       ok: false,
       error: "Falta id del partido",
     });
   }
-  if (!partido.calificaciones) {
+  if (!partido.calificacion) {
     return response.status(400).send({
       ok: false,
-      error: "Faltan las calificaciones del partido",
+      error: "Faltan la calificacion del partido",
     });
   }
-  try {
-    let arrayJugadoresCalificados = [];
-    let arraypromesas = [];
-    partido.calificaciones.map(async (cal) => {
-      const promesa = Jugador.findByIdAndUpdate(
-        cal.idJugador,
-        {
-          $addToSet: {
-            calificaciones: {
-              num: cal.num,
-              comentario: cal.comentario,
-              fecha: new Date,
-            },
+  if (!partido.idJugador) {
+    return response.status(400).send({
+      ok: false,
+      error: "Faltan el id del jugador",
+    });
+  }
+  if (!partido.idCalificador) {
+    return response.status(400).send({
+      ok: false,
+      error: "Faltan el id del calificador",
+    });
+  }
+  // try {
+    let user = await Jugador.findById(partido.idJugador);
+    let nota = partido.calificacion;
+    user.calificaciones.map((cal) => {
+      nota += cal.num;
+    });
+    nota = nota / (user.calificaciones.length + 1);
+
+    const JugadorActualizado = await Jugador.findByIdAndUpdate(
+      partido.idJugador,
+      {
+        $addToSet: {
+          calificaciones: {
+            num: partido.calificacion,
+            comentario: partido.comentario ? partido.comentario : "",
+            fecha: new Date(),
+            idJugador: partido.idCalificador,
+            idPartido: partido.idPartido,
           },
         },
-        { new: true }
-      ).then((jugador) => arrayJugadoresCalificados.push(jugador));
-      arraypromesas.push(promesa);
+        $set:{
+          promedioGlobal:nota
+        }
+      },
+      { new: true }
+    );
+      console.log(JugadorActualizado)
+    return response.status(200).json(JugadorActualizado);
+  // } catch (err) {
+  //   return response.status(500).send({
+  //     ok: false,
+  //     error: err,
+  //   });
+  // }
+});
+
+//partidos en los que está un jugador
+router.get("/partido/:id", verifyToken, async function (req, res) {
+  const jugadorId = req.params.id;
+  try {
+    const partidos = await Partido.find({
+      estado: "Confirmado",
+      lista: {
+        $elemMatch: {
+          id: jugadorId,
+        },
+      },
     });
-    Promise.all(arraypromesas)
-      .then(function (results) {
-        return response.status(200).json(arrayJugadoresCalificados);
-      })
-      .catch((err) => {
-        return response.status(500).send({
-          ok: false,
-          error: err,
-        });
+
+    //jugadores necesitados por la base de datos
+    const PlayersNeeded = [];
+    //partidos y sus respectivos jugadores
+    const partidoIds = {};
+
+    partidos.map((part) => {
+      //lista de jugadores necesitados por el partido
+      let idPlayersPartidos = [];
+
+      part.lista.map((user) => {
+        //agregar a lista de necesitados por la base de datos
+        if (user.id != jugadorId && !PlayersNeeded.includes(user.id))
+          PlayersNeeded.push(user.id);
+        //agregar a lista de necesitados por el partido
+        if (user.id != jugadorId) idPlayersPartidos.push(user.id);
       });
+      partidoIds[part._id] = idPlayersPartidos;
+      return;
+    });
+
+    // console.log("PlayersNeeded", PlayersNeeded, "partidoIds", partidoIds);
+
+    //sacar jugadores necesitados
+    let users = await Jugador.find({
+      _id: {
+        $in: PlayersNeeded,
+      },
+    });
+
+    //respuesta con partidos y sus respectivos jugadores
+    let respuesta = [];
+
+    partidos.map((part) => {
+      filtroRespuesta = {};
+      filtroRespuesta.partido = part;
+      jugadores = [];
+
+      //recorrer usuarios para agregarlos al partido
+      users.map((user) => {
+        if (!partidoIds[part._id].includes(user._id.toString())) return;
+        let BOOL = true;
+        //REVISAR SI EL JUGADOR YA HA SIDO CALIDICADO ANTERIORMENTE POR MI JUGADOR EN ESE MISMO PARTIDO
+        user.calificaciones.map((cal) => {
+          if (cal.idPartido == part._id && cal.idJugador == jugadorId) {
+            BOOL = false;
+          }
+          return;
+        });
+        //lo meto en los jugadores
+        if (BOOL) jugadores.push(user);
+        return;
+      });
+      filtroRespuesta.jugadores = jugadores;
+      respuesta.push(filtroRespuesta);
+    });
+
+    return res.status(200).json(respuesta);
   } catch (err) {
-    return response.status(500).send({
+    return res.status(500).json({
       ok: false,
       error: err,
     });
   }
-
-})
-
+});
 
 module.exports = router;

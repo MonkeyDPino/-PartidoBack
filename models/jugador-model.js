@@ -67,6 +67,12 @@ const jugadorSchema = new Schema({
             fecha:{
                 type:String,
                 required:true
+            },
+            idJugador:{
+                type:String,
+            },
+            idPartido:{
+                type:String,
             }
         }
     ]
