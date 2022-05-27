@@ -196,7 +196,10 @@ router.patch("/confirmar", verifyTokenAndAdmin, async function (req, response) {
     retorno.notificaciones = notificaciones
     return response.status(200).json(retorno);
   } catch (err) {
-    return response.status(500).json(err);
+    return response.status(500).json({
+      ok: false,
+      error: err,
+    });
   }
 });
 
@@ -245,7 +248,10 @@ router.delete("/", verifyTokenAndAdmin, async function (req, response) {
     );
     return response.status(200).json(partidoActualizado);
   } catch (err) {
-    return response.status(500).json(err);
+    return response.status(500).json({
+      ok: false,
+      error: err,
+    });
   }
 });
 
@@ -433,6 +439,9 @@ router.post("/equipos", verifyTokenAndAdmin, async function (req, response) {
       },
       { new: true }
     );
+
+    await sendEmailToAllPlayers("Equipos generados","El administrador ha generado los equipos ¡Atento pues! puede que estés en algún equipo")
+    
     return response.status(200).json(partidoActualizado);
   } catch (err) {
     return response.status(500).send({
