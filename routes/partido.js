@@ -347,6 +347,7 @@ router.delete(
           lista: listaNueva,
           equipoA: [],
           equipoB: [],
+          estado:"Creado"
         },
       });
       return response.status(200).json(partidoActualizado);
@@ -404,6 +405,7 @@ router.patch("/lista/:id", verifyTokenAndAdmin, async function (req, response) {
       $set: {
         equipoA: [],
         equipoB: [],
+        estado:"Creado"
       },
     });
     return response.status(200).json(partidoActualizado);
@@ -604,13 +606,15 @@ router.post("/calificaciones", verifyToken, async function (req, response) {
       error: "Faltan el id del calificador",
     });
   }
-  // try {
+  try {
     let user = await Jugador.findById(partido.idJugador);
-    let nota = partido.calificacion;
+    let nota = parseFloat(partido.calificacion);
     user.calificaciones.map((cal) => {
-      nota += cal.num;
+      nota += parseFloat(cal.num);
     });
+    console.log(nota, user.calificaciones.length);
     nota = nota / (user.calificaciones.length + 1);
+    console.log(nota, user.calificaciones.length);
 
     const JugadorActualizado = await Jugador.findByIdAndUpdate(
       partido.idJugador,
@@ -624,20 +628,20 @@ router.post("/calificaciones", verifyToken, async function (req, response) {
             idPartido: partido.idPartido,
           },
         },
-        $set:{
-          promedioGlobal:nota
-        }
+        $set: {
+          promedioGlobal: nota,
+        },
       },
       { new: true }
     );
-      console.log(JugadorActualizado)
+    console.log(JugadorActualizado);
     return response.status(200).json(JugadorActualizado);
-  // } catch (err) {
-  //   return response.status(500).send({
-  //     ok: false,
-  //     error: err,
-  //   });
-  // }
+  } catch (err) {
+    return response.status(500).send({
+      ok: false,
+      error: err,
+    });
+  }
 });
 
 //partidos en los que está un jugador
@@ -706,7 +710,9 @@ router.get("/partido/:id", verifyToken, async function (req, res) {
         return;
       });
       filtroRespuesta.jugadores = jugadores;
-      respuesta.push(filtroRespuesta);
+      filtroRespuesta.jugadores.length > 0
+        ? respuesta.push(filtroRespuesta)
+        : jugadores;
     });
 
     return res.status(200).json(respuesta);
@@ -716,6 +722,60 @@ router.get("/partido/:id", verifyToken, async function (req, res) {
       error: err,
     });
   }
+});
+
+//partido para darse de baja
+router.get("/baja/:id", verifyToken, async function (req, response) {
+  const jugadorId = req.params.id;
+  // try {
+    let respuesta = {};
+    const partido = await Partido.findOne({
+      estado: "EquiposGenerados",
+      lista: {
+        $elemMatch: {
+          id: jugadorId,
+        },
+      },
+      // $or: [
+      //   {
+      //     equipoA: {
+      //       $elemMatch: {
+      //         id: jugadorId,
+      //       },
+      //     },
+      //     equipoB: {
+      //       $elemMatch: {
+      //         id: jugadorId,
+      //       },
+      //     },
+      //   },
+      // ],
+    });
+    if (partido != null) {
+      respuesta.partido = partido;
+      const ids = [];
+      partido.lista.map((user) => {
+        ids.push(user.id);
+      });
+      let users = await Jugador.find({
+        _id: {
+          $nin: ids,
+        },
+      });
+      respuesta.jugadores = users;
+
+      return response.status(200).json(respuesta);
+    }
+    return response.status(500).json({
+      ok: false,
+      error: "no hay partidos para darse de baja",
+    });
+  // } catch (err) {
+  //   return response.status(500).send({
+  //     ok: false,
+  //     error: err,
+  //   });
+  // }
 });
 
 module.exports = router;
