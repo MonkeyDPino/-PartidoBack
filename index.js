@@ -10,6 +10,7 @@ const partidoRoute = require("./routes/partido")
 const app = express();
 
 app.use(express.json())
+app.get("/",(req,res) => {res.send("App de partido back")})
 app.use(cors())
 app.use("/api/auth",authRoute)
 app.use("/api/jugador",jugadorRoute)
