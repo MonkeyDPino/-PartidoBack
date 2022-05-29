@@ -86,7 +86,7 @@ router.patch("/jugadores", verifyTokenAndAuth, async function (req, res) {
       });
       return res.status(200).json({
         equipoB: equipoB,
-        equipoA: equipoA
+        equipoA: equipoA,
       });
     } catch (err) {
       return res.status(500).json({
@@ -186,8 +186,9 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
     let partidoPerteneciente = "",
       equipoA,
       equipoB,
-      filter = {},
-      retorno = {};
+      lista,
+      str = "";
+    (filter = {}), (retorno = {});
 
     // Revisar en que equipo esta el jugador
     equipoA = partidoBuscado.equipoA.filter((jugador) => {
@@ -212,13 +213,26 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
         error: "Jugador no convocado",
       });
     }
+    //crear nueva lista
+    lista = partidoBuscado.lista.filter((user) => user.id != idJugador);
+
     //Revisar suplente
     if (partido.suplenteId) {
       partidoPerteneciente == "A" && equipoA.push({ id: partido.suplenteId });
       partidoPerteneciente == "B" && equipoB.push({ id: partido.suplenteId });
+      partidoPerteneciente == "A" && (filter.equipoA = equipoA);
+      partidoPerteneciente == "B" && (filter.equipoB = equipoB);
+      lista.push({ id: partido.suplenteId });
+      const jugadorSuplente = await Jugador.findById(partido.suplenteId);
+      str =
+        " y ha marcado al jugador " +
+        jugadorSuplente.nombre +
+        "como su suplente.";
     } else {
       //Crear infraccion por falta de suplente
-
+      filter.estado = "Creado";
+      filter.equipoA = [];
+      filter.equipoB = [];
       let retornarError = false;
       let Error;
       crearInfraccion("Darse de baja sin asignar un reemplazo")
@@ -239,8 +253,7 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
           error: Error,
         });
     }
-    partidoPerteneciente == "A" && (filter.equipoA = equipoA);
-    partidoPerteneciente == "B" && (filter.equipoB = equipoB);
+    filter.lista = lista;
     const partidoActualizado = await Partido.findByIdAndUpdate(
       partido.id,
       {
@@ -254,13 +267,19 @@ router.delete("/partido", verifyTokenAndAuth, async function (req, response) {
     const jugadorAusente = await Jugador.findById(idJugador);
     const notificaciones = await sendEmailToAllPlayers(
       "Un jugador se ha dado de baja en un partido",
-      "El Jugador " + jugadorAusente.nombre + " se ha bajado del partido"
+      "El Jugador " +
+        jugadorAusente.nombre +
+        " se ha bajado del partido, cuidado" +
+        str
     );
     retorno.notificaciones = notificaciones;
 
     return response.status(200).json(retorno);
   } catch (err) {
-    return response.status(500).json(err);
+    return response.status(500).json({
+      ok: false,
+      error: err,
+    });
   }
 });
 

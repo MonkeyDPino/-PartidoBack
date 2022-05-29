@@ -65,7 +65,7 @@ router.post("/", verifyTokenAndAdmin, async function (req, response) {
       retorno.partido = result;
       const notificaciones = await sendEmailToAllPlayers(
         "Creación de partido",
-        "El administrador ha creado un nuevo partido ¡Atento pues!"
+        "El administrador ha creado un nuevo partido en "+result.lugar+" para el día "+result.fecha+" ¡Atento pues!"
       );
       retorno.notificaciones = notificaciones;
       return response.status(200).send(retorno);
