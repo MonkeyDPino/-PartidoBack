@@ -14,6 +14,41 @@ const {
   sendEmailToAllPlayers,
 } = require("../algoritmos");
 
+//calificaciones y sus respectivos jugadores
+router.get("/calificaciones", verifyTokenAndAuth, async function (req, response) {
+  // console.log("entra")
+  const jugadorId = req.query.id;
+  try {
+    const users = await Jugador.find({ _id:{
+      $nin:[jugadorId]
+    }});
+    const jugador = await Jugador.findById(jugadorId);
+    let calis = jugador.calificaciones
+    let calisRes = []
+    calis.forEach((cali) => {
+      let res = {}
+      let jugador;
+      users.some((user) => {
+        if(user._id == cali.idJugador ){
+          jugador = user 
+          return true;
+        };
+        return false;
+       })
+       
+       res = {cali,jugador};
+       calisRes.push(res)
+    })
+    return response.status(200).send(calisRes)
+  } catch (err) {
+    return response.status(500).send({
+      ok: false,
+      error: err,
+    });
+  }
+});
+
+
 //Crear partido
 router.post("/", verifyTokenAndAdmin, async function (req, response) {
   try {
@@ -727,7 +762,7 @@ router.get("/partido/:id", verifyToken, async function (req, res) {
 //partido para darse de baja
 router.get("/baja/:id", verifyToken, async function (req, response) {
   const jugadorId = req.params.id;
-  // try {
+  try {
     let respuesta = {};
     const partido = await Partido.findOne({
       estado: "EquiposGenerados",
@@ -770,12 +805,16 @@ router.get("/baja/:id", verifyToken, async function (req, response) {
       ok: false,
       error: "no hay partidos para darse de baja",
     });
-  // } catch (err) {
-  //   return response.status(500).send({
-  //     ok: false,
-  //     error: err,
-  //   });
-  // }
+  } catch (err) {
+    return response.status(500).send({
+      ok: false,
+      error: err,
+    });
+  }
 });
+
+
+
+
 
 module.exports = router;
