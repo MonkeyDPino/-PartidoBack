@@ -14,7 +14,6 @@ const verifyToken = (req, res, next) => {
       }
       
       req.user = user;
-      console.log(mongoose.Types.ObjectId.isValid(user.id))
       next();
     });
   } else {

@@ -16,7 +16,6 @@ const {
 
 //calificaciones y sus respectivos jugadores
 router.get("/calificaciones", verifyTokenAndAuth, async function (req, response) {
-  // console.log("entra")
   const jugadorId = req.query.id;
   try {
     const users = await Jugador.find({ _id:{
@@ -647,9 +646,7 @@ router.post("/calificaciones", verifyToken, async function (req, response) {
     user.calificaciones.map((cal) => {
       nota += parseFloat(cal.num);
     });
-    console.log(nota, user.calificaciones.length);
     nota = nota / (user.calificaciones.length + 1);
-    console.log(nota, user.calificaciones.length);
 
     const JugadorActualizado = await Jugador.findByIdAndUpdate(
       partido.idJugador,
@@ -669,7 +666,6 @@ router.post("/calificaciones", verifyToken, async function (req, response) {
       },
       { new: true }
     );
-    console.log(JugadorActualizado);
     return response.status(200).json(JugadorActualizado);
   } catch (err) {
     return response.status(500).send({
@@ -712,8 +708,7 @@ router.get("/partido/:id", verifyToken, async function (req, res) {
       return;
     });
 
-    // console.log("PlayersNeeded", PlayersNeeded, "partidoIds", partidoIds);
-
+    
     //sacar jugadores necesitados
     let users = await Jugador.find({
       _id: {
